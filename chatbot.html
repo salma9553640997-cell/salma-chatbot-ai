@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Correspondence — AI Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14181A;
+    --bg-panel:#1A1F21;
+    --ink:#E8E6DE;
+    --ink-dim:#8B948D;
+    --accent:#D9A441;
+    --accent-2:#4C7A73;
+    --border:#2A3134;
+    --user-bubble:#232B2D;
+    --danger:#C1666B;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    justify-content:center;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    width:100%;
+    max-width:720px;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:var(--bg-panel);
+    border-left:1px solid var(--border);
+    border-right:1px solid var(--border);
+  }
+
+  /* Letterhead */
+  header{
+    padding:22px 28px 18px;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.18em;
+    color:var(--accent-2);
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:26px;
+    margin:0;
+    letter-spacing:0.01em;
+  }
+  .entry-count{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--ink-dim);
+    text-align:right;
+    line-height:1.6;
+  }
+  .entry-count span{color:var(--accent);}
+
+  /* Chat log */
+  .log{
+    flex:1;
+    overflow-y:auto;
+    padding:24px 28px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  .log::-webkit-scrollbar{width:8px;}
+  .log::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+  .entry{max-width:88%;}
+  .entry.ai{
+    align-self:flex-start;
+    border-left:2px solid var(--accent);
+    padding-left:16px;
+  }
+  .entry.user{
+    align-self:flex-end;
+    background:var(--user-bubble);
+    padding:12px 16px;
+    border-radius:10px 10px 2px 10px;
+  }
+  .entry .role{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin-bottom:6px;
+  }
+  .entry.user .role{text-align:right;color:var(--accent-2);}
+  .entry .body{
+    font-size:15px;
+    line-height:1.6;
+    white-space:pre-wrap;
+    word-wrap:break-word;
+  }
+  .entry.error .body{color:var(--danger);}
+
+  .composing{
+    align-self:flex-start;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding-left:16px;
+    border-left:2px solid var(--accent);
+    color:var(--ink-dim);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+  }
+  .dots{display:flex;gap:4px;}
+  .dots span{
+    width:5px;height:5px;border-radius:50%;
+    background:var(--accent);
+    animation:pulse 1.1s infinite ease-in-out;
+  }
+  .dots span:nth-child(2){animation-delay:0.15s;}
+  .dots span:nth-child(3){animation-delay:0.3s;}
+  @keyframes pulse{
+    0%,80%,100%{opacity:0.25;transform:scale(0.85);}
+    40%{opacity:1;transform:scale(1);}
+  }
+
+  /* Empty state */
+  .empty{
+    margin:auto;
+    text-align:center;
+    color:var(--ink-dim);
+    max-width:340px;
+  }
+  .empty .mark{
+    font-family:'Fraunces',serif;
+    font-style:italic;
+    font-size:20px;
+    color:var(--ink);
+    margin-bottom:8px;
+  }
+  .empty p{font-size:13px;line-height:1.6;margin:0;}
+
+  /* Composer */
+  form{
+    border-top:1px solid var(--border);
+    padding:16px 20px;
+    display:flex;
+    align-items:flex-end;
+    gap:12px;
+  }
+  textarea{
+    flex:1;
+    resize:none;
+    background:transparent;
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:14.5px;
+    padding:11px 14px;
+    line-height:1.5;
+    max-height:140px;
+    outline:none;
+    transition:border-color 0.15s ease;
+  }
+  textarea:focus{border-color:var(--accent-2);}
+  textarea::placeholder{color:var(--ink-dim);}
+
+  button{
+    width:42px;height:42px;
+    border-radius:50%;
+    border:1px solid var(--accent);
+    background:transparent;
+    color:var(--accent);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    transition:background 0.15s ease, color 0.15s ease;
+  }
+  button:hover:not(:disabled){background:var(--accent);color:var(--bg);}
+  button:disabled{opacity:0.35;cursor:default;}
+  button svg{width:16px;height:16px;}
+
+  @media (prefers-reduced-motion: reduce){
+    .dots span{animation:none;opacity:1;}
+  }
+
+  @media (max-width:480px){
+    header{padding:18px 18px 14px;}
+    .log{padding:18px 18px;}
+    h1{font-size:22px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="eyebrow">Correspondence</div>
+      <h1>Ask Anything</h1>
+    </div>
+    <div class="entry-count">Entry <span id="entryNo">No. 000</span></div>
+  </header>
+
+  <div class="log" id="log">
+    <div class="empty" id="emptyState">
+      <div class="mark">A blank page.</div>
+      <p>Write the first line below — the reply appears just above it, like a note in the margin.</p>
+    </div>
+  </div>
+
+  <form id="form">
+    <textarea id="input" rows="1" placeholder="Write your message…"></textarea>
+    <button type="submit" id="sendBtn" aria-label="Send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="19" x2="12" y2="5"></line>
+        <polyline points="5 12 12 5 19 12"></polyline>
+      </svg>
+    </button>
+  </form>
+</div>
+
+<script>
+  const log = document.getElementById('log');
+  const form = document.getElementById('form');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const emptyState = document.getElementById('emptyState');
+  const entryNo = document.getElementById('entryNo');
+
+  let history = [];
+  let entryCount = 0;
+
+  function pad(n){ return String(n).padStart(3,'0'); }
+
+  function updateCount(){
+    entryNo.textContent = 'No. ' + pad(entryCount);
+  }
+
+  function autoResize(){
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  }
+  input.addEventListener('input', autoResize);
+
+  function addEntry(role, text, isError=false){
+    if(emptyState) emptyState.remove();
+    const div = document.createElement('div');
+    div.className = 'entry ' + role + (isError ? ' error' : '');
+    const roleLabel = role === 'user' ? 'You' : (isError ? 'System' : 'Assistant');
+    div.innerHTML = `<div class="role">${roleLabel}</div><div class="body"></div>`;
+    div.querySelector('.body').textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+    return div;
+  }
+
+  function showComposing(){
+    const div = document.createElement('div');
+    div.className = 'composing';
+    div.id = 'composingIndicator';
+    div.innerHTML = `Composing <span class="dots"><span></span><span></span><span></span></span>`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function hideComposing(){
+    const el = document.getElementById('composingIndicator');
+    if(el) el.remove();
+  }
+
+  async function sendMessage(text){
+    history.push({ role: 'user', content: text });
+    entryCount++;
+    updateCount();
+    sendBtn.disabled = true;
+    showComposing();
+
+    try{
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          messages: history
+        })
+      });
+
+      if(!response.ok){
+        throw new Error('Request failed with status ' + response.status);
+      }
+
+      const data = await response.json();
+      const reply = (data.content || [])
+        .map(block => block.type === 'text' ? block.text : '')
+        .filter(Boolean)
+        .join('\n');
+
+      hideComposing();
+
+      if(reply){
+        history.push({ role: 'assistant', content: reply });
+        addEntry('ai', reply);
+      } else {
+        addEntry('ai', 'No reply was returned. Try again.', true);
+      }
+    } catch(err){
+      hideComposing();
+      addEntry('ai', 'Something went wrong reaching the assistant: ' + err.message, true);
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if(!text) return;
+    addEntry('user', text);
+    input.value = '';
+    autoResize();
+    sendMessage(text);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  input.focus();
+</script>
+</body>
+</html>
